@@ -218,16 +218,16 @@ const projects = ref([
   },
   {
     id: 3,
-    name: 'Portafolio',
-    description: 'Mi portafolio',
+    name: 'Revisión de responsividad',
+    description: 'Revisa tu pagina web en diferentes dispositivos',
     images: [
-      'https://picsum.photos/400/250?random=8',
-      'https://picsum.photos/400/250?random=9'
+      '/ui/imgProyectos/Respinsivaspag1.png',
+      '/ui/imgProyectos/Respinsivaspag2.png'
     ],
     currentImageIndex: 0,
     tags: ['Vue', 'React', 'HTML', 'CSS', 'JS'],
-    liveUrl: 'https://demo.weather.com',
-    githubUrl: 'https://github.com/tuusuario/proyecto3'
+    liveUrl: 'https://paginas-responsivas-revision.vercel.app/',
+    githubUrl: 'https://github.com/y0x3/paginas-responsivas-revisi-n-'
   }
 ]);
 
@@ -787,5 +787,12 @@ const goBack = () => {
   .mobile-preview-container {
     padding: 10px;
   }
+}
+
+.carousel-images img {
+  width: 100%;
+  height: 100%;
+  object-fit: fill; /* Estira la imagen */
+  transition: opacity 0.3s;
 }
 </style>

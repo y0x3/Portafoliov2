@@ -1,6 +1,6 @@
 <!-- src/components/windows/MyCatsWindow.vue -->
 <template>
-  <div class="cat-screen-overlay">
+  <div class="cat-screen-overlay" @mousemove="handleMouseMove">
     <!-- Botón de cerrar flotante -->
     <button class="close-button" @click="$emit('close')" title="Cerrar">
       ✕
@@ -11,7 +11,16 @@
       v-for="cat in cats" 
       :key="cat.id"
       class="walking-cat"
+      :class="{ 
+        'cat-running': cat.isRunning,
+        'cat-angry': cat.isAngry,
+        'cat-leaving': cat.isLeaving,
+        'cat-returning': cat.isReturning,
+        'cat-sleeping': cat.isSleeping,
+        'cat-loving': cat.isLoving
+      }"
       :style="getCatStyle(cat)"
+      @click="handleCatClick(cat)"
     >
       <!-- GIF del gato -->
       <img 
@@ -23,6 +32,23 @@
       <!-- Nombre del gato con color personalizado -->
       <div class="cat-name" :style="{ color: cat.profile.color }">
         {{ cat.profile.name }}
+      </div>
+
+      <!-- 🔥 Emoji de enojo (Kuro) -->
+      <div v-if="cat.isAngry" class="angry-emoji">😾💢</div>
+
+      <!-- 🔥 ZZZ de sueño (Karawita) -->
+      <div v-if="cat.isSleeping" class="sleep-zzz">
+        <span class="zzz zzz1">Z</span>
+        <span class="zzz zzz2">Z</span>
+        <span class="zzz zzz3">Z</span>
+      </div>
+
+      <!-- 🔥 Corazones (Mishita) -->
+      <div v-if="cat.isLoving" class="love-hearts">
+        <span class="heart heart1">💗</span>
+        <span class="heart heart2">💕</span>
+        <span class="heart heart3">💖</span>
       </div>
     </div>
   </div>
@@ -38,6 +64,9 @@ defineProps({
 
 defineEmits(['close']);
 
+// 🔥 Posición del mouse
+const mousePosition = ref({ x: 0, y: 0 });
+
 // 👇 Inicializar gatos con sus perfiles únicos
 const cats = ref([
   { 
@@ -48,7 +77,14 @@ const cats = ref([
     y: 200,
     direction: 'right',
     speed: catAnimationSystem.catProfiles.Kuro.speed,
-    currentState: 'walking'
+    currentState: 'walking',
+    isRunning: false,
+    isAngry: false,
+    isLeaving: false,
+    isReturning: false,
+    isSleeping: false,
+    isLoving: false,
+    exitPosition: null
   },
   { 
     id: 2, 
@@ -58,7 +94,14 @@ const cats = ref([
     y: 400,
     direction: 'right',
     speed: catAnimationSystem.catProfiles.Karawita.speed,
-    currentState: 'sitting'
+    currentState: 'sitting',
+    isRunning: false,
+    isAngry: false,
+    isLeaving: false,
+    isReturning: false,
+    isSleeping: false,
+    isLoving: false,
+    exitPosition: null
   },
   { 
     id: 3, 
@@ -68,7 +111,14 @@ const cats = ref([
     y: 150,
     direction: 'left',
     speed: catAnimationSystem.catProfiles.Mishita.speed,
-    currentState: 'standing'
+    currentState: 'standing',
+    isRunning: false,
+    isAngry: false,
+    isLeaving: false,
+    isReturning: false,
+    isSleeping: false,
+    isLoving: false,
+    exitPosition: null
   }
 ]);
 
@@ -76,6 +126,11 @@ let animationFrameId = null;
 
 // 👇 Obtener el GIF actual según el perfil y estado del gato
 const getCurrentGif = (cat) => {
+  if (cat.isLeaving || cat.isReturning) return cat.profile.gifs.walking;
+  if (cat.isAngry) return cat.profile.gifs.angry;
+  if (cat.isRunning) return cat.profile.gifs.running;
+  if (cat.isSleeping) return cat.profile.gifs.sleeping;
+  if (cat.isLoving) return cat.profile.gifs.loving;
   return cat.profile.gifs[cat.currentState];
 };
 
@@ -85,7 +140,128 @@ const getCatStyle = (cat) => ({
   top: `${cat.y}px`
 });
 
-// Mover gatos
+// 🔥 MEJORADO: Capturar posición del mouse a nivel de documento
+const handleMouseMove = (event) => {
+  mousePosition.value = {
+    x: event.clientX,
+    y: event.clientY
+  };
+};
+
+// 🔊 Función para reproducir sonidos
+const playSoundEffect = (soundPath) => {
+  try {
+    const audio = new Audio(soundPath);
+    audio.volume = 0.1;
+    audio.play().catch(err => {
+      console.warn('⚠️ No se pudo reproducir el sonido:', err);
+    });
+  } catch (error) {
+    console.error('❌ Error al reproducir sonido:', error);
+  }
+};
+
+const handleCatClick = (cat) => {
+  // No hacer nada si ya está en algún estado especial
+  if (cat.isLeaving || cat.isReturning) return;
+
+  const result = catAnimationSystem.handleCatClick(cat.profileId);
+  
+  if (!result) return;
+
+  // KURO - Comportamiento de enojo
+  if (result.action === 'run') {
+    cat.isRunning = true;
+    cat.currentState = 'running';
+    cat.speed = cat.profile.runSpeed;
+
+    setTimeout(() => {
+      cat.isRunning = false;
+      cat.currentState = 'walking';
+      cat.speed = cat.profile.speed;
+    }, result.duration);
+
+  } else if (result.action === 'leave') {
+    cat.isAngry = true;
+    cat.currentState = 'angry';
+    
+    cat.exitPosition = {
+      x: cat.x,
+      y: cat.y,
+      direction: cat.direction
+    };
+    
+    setTimeout(() => {
+      cat.isAngry = false;
+      cat.isLeaving = true;
+      cat.currentState = 'leaving';
+      cat.speed = cat.profile.runSpeed * 1.5;
+
+      // 🔥 Reproducir sonido al salir
+      if (result.sound) {
+        catAnimationSystem.playSound(result.sound);
+      }
+
+      const screenWidth = window.innerWidth;
+      if (cat.x < screenWidth / 2) {
+        cat.direction = 'left';
+      } else {
+        cat.direction = 'right';
+      }
+
+      setTimeout(() => {
+        startCatReturn(cat);
+      }, result.duration);
+    }, 2000);
+  }
+  
+  // 🔥 KARAWITA - Comportamiento de dormir
+  else if (result.action === 'sleep') {
+    cat.isSleeping = true;
+    cat.currentState = 'sleeping';
+    
+    setTimeout(() => {
+      cat.isSleeping = false;
+      cat.currentState = 'walking';
+    }, result.duration);
+  }
+  
+  // 🔥 MISHITA - Comportamiento amoroso (seguir mouse)
+  else if (result.action === 'love') {
+    cat.isLoving = true;
+    cat.currentState = 'loving';
+    cat.speed = cat.profile.speed * (result.speedMultiplier || 4);
+    
+    setTimeout(() => {
+      cat.isLoving = false;
+      cat.currentState = 'walking';
+      cat.speed = cat.profile.speed;
+    }, result.duration);
+  }
+};
+
+// 🔥 Hacer que el gato regrese caminando
+const startCatReturn = (cat) => {
+  cat.isLeaving = false;
+  cat.isReturning = true;
+  cat.currentState = 'walking';
+  cat.speed = cat.profile.speed;
+
+  const screenWidth = window.innerWidth;
+  const catWidth = 150;
+
+  if (cat.exitPosition.direction === 'left' || cat.direction === 'left') {
+    cat.x = -catWidth;
+    cat.direction = 'right';
+  } else {
+    cat.x = screenWidth + catWidth;
+    cat.direction = 'left';
+  }
+
+  cat.y = cat.exitPosition.y;
+};
+
+// 🔥 MEJORADO: Mover gatos con lógica especial para cada uno
 const moveCats = () => {
   const screenWidth = window.innerWidth;
   const screenHeight = window.innerHeight;
@@ -93,43 +269,105 @@ const moveCats = () => {
   const catHeight = 150;
 
   cats.value.forEach(cat => {
-    // Solo mover si está en estado 'walking'
-    if (cat.currentState === 'walking') {
-      // Mover horizontalmente
+    // 🔥 MISHITA - Seguir el mouse cuando está en modo amoroso
+    if (cat.isLoving && cat.profileId === 'Mishita') {
+      const targetX = mousePosition.value.x - catWidth / 2;
+      const targetY = mousePosition.value.y - catHeight / 2;
+      
+      const deltaX = targetX - cat.x;
+      const deltaY = targetY - cat.y;
+      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+      
+      // 🔥 Siempre moverse hacia el mouse
+      if (distance > 5) {
+        const moveX = (deltaX / distance) * cat.speed;
+        const moveY = (deltaY / distance) * cat.speed;
+        
+        cat.x += moveX;
+        cat.y += moveY;
+        
+        // Cambiar dirección según hacia donde va
+        cat.direction = deltaX > 0 ? 'right' : 'left';
+      }
+    }
+    // 🔥 KARAWITA - No moverse mientras duerme
+    else if (cat.isSleeping) {
+      // No hacer nada, está durmiendo
+    }
+    // Movimiento normal
+    else if (cat.currentState === 'walking' || cat.isRunning || cat.isLeaving || cat.isReturning) {
+      
       if (cat.direction === 'right') {
         cat.x += cat.speed;
         
-        // Si llega al borde derecho, cambiar dirección
-        if (cat.x > screenWidth - catWidth) {
-          cat.direction = 'left';
-          cat.x = screenWidth - catWidth;
+        if (cat.isLeaving) {
+          // Saliendo...
+        } 
+        else if (cat.isReturning) {
+          if (cat.x >= cat.exitPosition.x) {
+            cat.x = cat.exitPosition.x;
+            cat.direction = cat.exitPosition.direction;
+            cat.isReturning = false;
+            cat.currentState = 'walking';
+            cat.exitPosition = null;
+            catAnimationSystem.resetClickCount(cat.profileId);
+          }
+        } 
+        else {
+          if (cat.x > screenWidth - catWidth) {
+            cat.direction = 'left';
+            cat.x = screenWidth - catWidth;
+          }
         }
       } else {
         cat.x -= cat.speed;
         
-        // Si llega al borde izquierdo, cambiar dirección
-        if (cat.x < 0) {
-          cat.direction = 'right';
-          cat.x = 0;
+        if (cat.isLeaving) {
+          // Saliendo...
+        } 
+        else if (cat.isReturning) {
+          if (cat.x <= cat.exitPosition.x) {
+            cat.x = cat.exitPosition.x;
+            cat.direction = cat.exitPosition.direction;
+            cat.isReturning = false;
+            cat.currentState = 'walking';
+            cat.exitPosition = null;
+            catAnimationSystem.resetClickCount(cat.profileId);
+          }
+        } 
+        else {
+          if (cat.x < 0) {
+            cat.direction = 'right';
+            cat.x = 0;
+          }
         }
       }
     }
 
-    // Mantener dentro de límites verticales
-    if (cat.y < 0) cat.y = 0;
-    if (cat.y > screenHeight - catHeight) cat.y = screenHeight - catHeight;
+    // 🔥 MISHITA: Mantener dentro de límites de pantalla
+    if (cat.isLoving && cat.profileId === 'Mishita') {
+      if (cat.x < 0) cat.x = 0;
+      if (cat.x > screenWidth - catWidth) cat.x = screenWidth - catWidth;
+      if (cat.y < 0) cat.y = 0;
+      if (cat.y > screenHeight - catHeight) cat.y = screenHeight - catHeight;
+    }
+    // Mantener dentro de límites verticales (otros gatos)
+    else if (!cat.isLeaving && !cat.isReturning) {
+      if (cat.y < 0) cat.y = 0;
+      if (cat.y > screenHeight - catHeight) cat.y = screenHeight - catHeight;
+    }
 
-    // Cambio aleatorio de estado (0.5% probabilidad por frame)
-    if (Math.random() < 0.005) {
+    // Cambio aleatorio de estado (solo si no está en estados especiales)
+    if (!cat.isRunning && !cat.isAngry && !cat.isLeaving && !cat.isReturning && !cat.isSleeping && !cat.isLoving && Math.random() < 0.005) {
       const newState = catAnimationSystem.getNextState(cat.currentState);
       cat.currentState = newState;
       
-      // Si deja de caminar, detener movimiento
       if (newState !== 'walking') {
-        // Después de 2-4 segundos, vuelve a caminar
-        const waitTime = Math.random() * 2000 + 2000; // 2-4 segundos
+        const waitTime = Math.random() * 2000 + 2000;
         setTimeout(() => {
-          cat.currentState = 'walking';
+          if (!cat.isRunning && !cat.isAngry && !cat.isLeaving && !cat.isReturning && !cat.isSleeping && !cat.isLoving) {
+            cat.currentState = 'walking';
+          }
         }, waitTime);
       }
     }
@@ -139,11 +377,24 @@ const moveCats = () => {
 };
 
 onMounted(() => {
+  catAnimationSystem.setSoundEffectFunction(playSoundEffect);
+  console.log('🐱 MyCatsWindow montado, función de sonido registrada');
+  
+  // 🔥 NUEVO: Escuchar mousemove a nivel de documento (no del overlay)
+  document.addEventListener('mousemove', handleMouseMove);
+  
   moveCats();
 });
 
 onUnmounted(() => {
   if (animationFrameId) cancelAnimationFrame(animationFrameId);
+  
+  // 🔥 NUEVO: Limpiar listener de mousemove
+  document.removeEventListener('mousemove', handleMouseMove);
+  
+  cats.value.forEach(cat => {
+    catAnimationSystem.resetClickCount(cat.profileId);
+  });
 });
 </script>
 
@@ -192,8 +443,33 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  pointer-events: none;
+  pointer-events: all;
+  cursor: pointer;
   transition: left 0.05s linear, top 0.05s linear;
+}
+
+/* Estados especiales */
+.cat-running .cat-sprite {
+  animation: shake 0.1s infinite;
+}
+
+.cat-angry {
+  animation: shake 0.2s infinite;
+}
+
+.cat-loving .cat-sprite {
+  animation: wiggle 0.3s infinite;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0) translateY(0); }
+  25% { transform: translateX(-2px) translateY(-2px); }
+  75% { transform: translateX(2px) translateY(2px); }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
 }
 
 .cat-sprite {
@@ -220,5 +496,121 @@ onUnmounted(() => {
   font-family: 'MS Sans Serif', sans-serif;
   pointer-events: none;
   letter-spacing: 1px;
+}
+
+/* 🔥 Emoji de enojo */
+.angry-emoji {
+  position: absolute;
+  top: -30px;
+  right: -10px;
+  font-size: 24px;
+  animation: bounce 0.5s infinite;
+  pointer-events: none;
+}
+
+/* 🔥 ZZZ de sueño */
+.sleep-zzz {
+  position: absolute;
+  top: -40px;
+  right: 10px;
+  pointer-events: none;
+}
+
+.zzz {
+  position: absolute;
+  font-size: 20px;
+  font-weight: bold;
+  color: #4a90e2;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  animation: float-zzz 2s infinite;
+}
+
+.zzz1 {
+  left: 0;
+  animation-delay: 0s;
+}
+
+.zzz2 {
+  left: 15px;
+  top: -10px;
+  animation-delay: 0.3s;
+}
+
+.zzz3 {
+  left: 30px;
+  top: -20px;
+  animation-delay: 0.6s;
+}
+
+@keyframes float-zzz {
+  0%, 100% { 
+    opacity: 0;
+    transform: translateY(0);
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+
+/* 🔥 Corazones */
+.love-hearts {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.heart {
+  position: absolute;
+  font-size: 24px;
+  animation: float-heart 2s infinite;
+}
+
+.heart1 {
+  left: -20px;
+  animation-delay: 0s;
+}
+
+.heart2 {
+  left: 0;
+  animation-delay: 0.3s;
+}
+
+.heart3 {
+  left: 20px;
+  animation-delay: 0.6s;
+}
+
+@keyframes float-heart {
+  0%, 100% { 
+    opacity: 0;
+    transform: translateY(0) scale(0.5);
+  }
+  10% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-30px) scale(1);
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-60px) scale(0.5);
+  }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
 }
 </style>

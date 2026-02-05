@@ -9,12 +9,16 @@ const isPlaying = ref(false);
 const currentSong = ref(null);
 const currentTime = ref(0);
 const volume = ref(70);
-const previousVolume = ref(70); // Guardar volumen anterior para unmute
+const previousVolume = ref(70);
 const playlist = ref([]);
-const isShuffleMode = ref(false); // Para recordar si estamos en modo aleatorio
+const isShuffleMode = ref(false);
+
+// 🔥 NUEVO: Pool de audio elements para efectos de sonido
+const soundEffectsPool = [];
+const MAX_SOUND_EFFECTS = 5;
 
 // ============================================
-// FUNCIONES DE REPRODUCCIÓN (fuera del composable)
+// FUNCIONES DE REPRODUCCIÓN
 // ============================================
 
 const setPlaylist = (newPlaylist) => {
@@ -30,7 +34,6 @@ const playSong = (song) => {
 };
 
 const togglePlay = () => {
-  // Si no hay canción, reproducir la primera de la playlist
   if (!currentSong.value) {
     if (playlist.value.length > 0) {
       playSong(playlist.value[0]);
@@ -48,10 +51,8 @@ const togglePlay = () => {
 };
 
 const nextSong = () => {
-  // Si no hay playlist, no hacer nada
   if (!playlist.value.length) return;
   
-  // Si no hay canción actual, reproducir la primera
   if (!currentSong.value) {
     playSong(playlist.value[0]);
     return;
@@ -63,10 +64,8 @@ const nextSong = () => {
 };
 
 const previousSong = () => {
-  // Si no hay playlist, no hacer nada
   if (!playlist.value.length) return;
   
-  // Si no hay canción actual, reproducir la última de la playlist
   if (!currentSong.value) {
     playSong(playlist.value[playlist.value.length - 1]);
     return;
@@ -85,18 +84,19 @@ const seekTo = (seconds) => {
 const setVolume = (newVolume) => {
   volume.value = newVolume;
   audioElement.volume = newVolume / 100;
+  
+  // 🔥 CRÍTICO: Actualizar volumen de TODOS los efectos (incluso los que están sonando)
+  soundEffectsPool.forEach(audio => {
+    audio.volume = newVolume / 100;
+  });
 };
 
 const toggleMute = () => {
   if (volume.value > 0) {
-    // Guardar volumen actual antes de mutear
     previousVolume.value = volume.value;
-    volume.value = 0;
-    audioElement.volume = 0;
+    setVolume(0); // 🔥 Usar setVolume para que actualice todo
   } else {
-    // Restaurar volumen anterior
-    volume.value = previousVolume.value || 70;
-    audioElement.volume = volume.value / 100;
+    setVolume(previousVolume.value || 70); // 🔥 Usar setVolume
   }
 };
 
@@ -108,13 +108,8 @@ const stopPlayback = () => {
 };
 
 const shufflePlay = () => {
-  // Si no hay playlist, no hacer nada
   if (!playlist.value.length) return;
-  
-  // Activar modo shuffle
   isShuffleMode.value = true;
-  
-  // Generar índice aleatorio
   const randomIndex = Math.floor(Math.random() * playlist.value.length);
   playSong(playlist.value[randomIndex]);
 };
@@ -128,6 +123,27 @@ const disableShuffle = () => {
   isShuffleMode.value = false;
 };
 
+// 🔥 Reproducir efecto de sonido respetando volumen global
+const playSoundEffect = (soundPath) => {
+  try {
+    const audio = new Audio(soundPath);
+    audio.volume = 0.5; // Ajusta el volumen (0.0 a 1.0)
+    audio.play().catch(err => {
+      console.warn('⚠️ No se pudo reproducir el sonido:', err);
+    });
+  } catch (error) {
+    console.error('❌ Error al reproducir sonido:', error);
+  }
+};
+
+// 🔥 Detener todos los efectos de sonido
+const stopAllSoundEffects = () => {
+  soundEffectsPool.forEach(audio => {
+    audio.pause();
+    audio.currentTime = 0;
+  });
+};
+
 // ============================================
 // EVENT LISTENERS
 // ============================================
@@ -136,7 +152,6 @@ audioElement.addEventListener('timeupdate', () => {
 });
 
 audioElement.addEventListener('ended', () => {
-  // Auto-play siguiente canción (aleatoria si está en shuffle mode)
   if (isShuffleMode.value) {
     shufflePlay();
   } else {
@@ -149,7 +164,6 @@ audioElement.addEventListener('loadedmetadata', () => {
 });
 
 const addSongToPlaylist = (song) => {
-  // Verificar si la canción ya está en la playlist
   const exists = playlist.value.some(s => s.audioUrl === song.audioUrl);
   
   if (!exists) {
@@ -185,6 +199,8 @@ export function useGlobalAudio() {
     shufflePlay,
     toggleShuffle,
     disableShuffle,
-    addSongToPlaylist 
+    addSongToPlaylist,
+    playSoundEffect,
+    stopAllSoundEffects
   };
 }

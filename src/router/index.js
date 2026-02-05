@@ -5,6 +5,10 @@ import Home from '@/views/Home.vue'
 const routes = [
   {
     path: '/',
+    redirect: '/home'  // ← Redirige automáticamente a /home
+  },
+  {
+    path: '/login',
     name: 'Login',
     component: XPLogin
   },

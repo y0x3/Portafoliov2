@@ -48,7 +48,7 @@
 </template>
 
 <script setup>
-import { ref, computed, provide } from 'vue';
+import { ref, computed, provide, onMounted } from 'vue';
 import Desktop from '@/components/Desktop.vue';
 import Taskbar from '@/components/Taskbar.vue';
 import Window from '@/components/Window.vue';
@@ -78,6 +78,14 @@ const { playSong } = useGlobalAudio();
 provide('windowManager', windowManager);
 
 const isStartMenuOpen = ref(false);
+
+onMounted(() => {
+  setTimeout(() => {      
+    openWindow('internetexplorer'); 
+    openWindow('outlook');    
+    openWindow('mycomputer');     
+  }, 300); 
+});
 
 const isSpotifyOpen = computed(() => {
   return windows.value.some(w => w.appId === 'spotify' && !w.isMinimized);
@@ -180,6 +188,8 @@ const openSpotifyFromMiniPlayer = () => {
     openWindow('spotify');
   }
 };
+
+
 </script>
 
 <style>

@@ -207,7 +207,7 @@ const turnOff = () => {
   border-right-color: #1060e9;
   border-bottom-color: #1060e9;
   box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.4);
-  z-index: 1000;
+  z-index: 100000000000000000000;
   border-radius: 8px 8px 0 0;
   display: flex;
   flex-direction: column;
