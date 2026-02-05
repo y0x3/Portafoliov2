@@ -203,18 +203,19 @@ const projects = ref([
   },
   {
     id: 2,
-    name: 'ExpressLabs',
-    description: 'Proyecto para crear páginas web para donatarias (ONGs)',
+    name: 'MinijuegosOnline',
+    description: 'Pagina de diferentes minijuegos online',
     images: [
-      'https://picsum.photos/400/250?random=4',
-      'https://picsum.photos/400/250?random=5',
-      'https://picsum.photos/400/250?random=6',
-      'https://picsum.photos/400/250?random=7'
+      '/ui/imgProyectos/minijuegos_cap1.png',
+      '/ui/imgProyectos/minijuegos_cap2.png',
+      '/ui/imgProyectos/minijuegos_cap3.png',
+      '/ui/imgProyectos/minijuegos_cap4.png',
+      '/ui/imgProyectos/minijuegos_cap5.png'
     ],
     currentImageIndex: 0,
-    tags: ['React', 'HTML', 'JS','TailwinCss'],
-    liveUrl: 'https://express-labs.vercel.app/',
-    githubUrl: 'https://github.com/y0x3/ExpressLabs'
+    tags: ['React', 'Next', 'JS','HTML','CSS','Firebase'],
+    liveUrl: 'https://minijuegos-sigma.vercel.app/',
+    githubUrl: 'https://github.com/y0x3/MinijuegosOnline'
   },
   {
     id: 3,

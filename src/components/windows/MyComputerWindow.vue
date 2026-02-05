@@ -63,7 +63,7 @@
         <img src="/ui/desktop/yo.jpg" class="profile-photo" />
         <div class="profile-info">
           <h1 class="profile-name">Diego Contreras Muñoz</h1>
-          <p class="profile-title">Full Stack Developer</p>
+          <p class="profile-title">Frontend Developer</p>
           <p class="profile-location">Mexico, Pacucha hidalgo</p>
         </div>
       </div>
@@ -75,9 +75,9 @@
           <h2>Sobre Mi</h2>
         </div>
         <p class="section-text">
-          Soy un desarrollador apasionado por crear experiencias web únicas e innovadoras.
-          Con experiencia en Vue.js, React, Node.js y más, me especializo en transformar
-          ideas creativas en aplicaciones funcionales y atractivas.
+          Soy desarrollador web y me gusta mucho trabajar la lógica detrás de las aplicaciones y el desarrollo
+          backend. Siempre estoy aprendiendo nuevas tecnologías para mejorar la funcionalidad, el rendimiento y
+          las animaciones, y disfruto automatizar procesos para hacer todo más eficiente.
         </p>
       </section>
 
